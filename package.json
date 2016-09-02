@@ -1,0 +1,46 @@
+{
+  "author": {
+    "name": "Mihir Gokani",
+    "email": "mihirgokani007@yahoo.co.in",
+    "url": "http://mihirgokani.in/"
+  },
+  "bugs": {
+    "url": "https://github.com/mihirgokani007/gulp-pomerge/issues"
+  },
+  "dependencies": {
+    "gulp-util": "^3.0.7",
+    "pofile": "^1.0.2",
+    "through2": "^2.0.1"
+  },
+  "description": "Transform and manipulate translations on the way!",
+  "devDependencies": {},
+  "directories": {},
+  "engines": {
+    "node": ">=0.10"
+  },
+  "files": [
+    "index.js"
+  ],
+  "gitHead": "3150b1452137e7e4c8e3d072125fb50864119651",
+  "homepage": "https://github.com/mihirgokani007/gulp-pomerge#readme",
+  "keywords": [
+    "gulpplugin",
+    "pofile",
+    "gettext",
+    "translation",
+    "transform",
+    "angular"
+  ],
+  "license": "MIT",
+  "main": "index.js",
+  "name": "gulp-pomerge",
+  "optionalDependencies": {},
+  "readme": "# [gulp](http://gulpjs.com)-pomerge\n\n> Transform given set of PO files using simple callbacks\n\n\n## Install\n\nInstall with [npm][1]\n\n```sh\nnpm install --save-dev gulp-pomerge\n```\n\n\n## API\n\n```js\nvar gulp = require('gulp');\nvar pomerge = require('gulp-pomerge');\n\ngulp.task('translations', function () {\n    return gulp.src('po/**/*.po')\n        .pipe(pomerge({\n            comments: function(comment) {\n                // manipulate comment or return a new one\n                return comment;\n                // Or a promise which resolves to `comment`\n            },\n            headers: function(header) {\n                // manipulate header or return a new one\n                return header;\n                // Or a promise which resolves to `header`\n            },\n            items: function(item) {\n                // manipulate item or return a new one\n                // item is instance of [PO.Item][2]\n                return item;\n                // Or a promise which resolves to `item`\n            }\n        }))\n        .pipe(gulp.dest('dist/translations/'));\n});\n```\n\nNote that all callbacks are async, i.e. you can return a promise which resolves to\nthe manipulated comment, header, or item.\n\n## Example\n\nFor example, the gulp-angular-gettext plugin will output an empty json if PO file\ncontains empty translations. In some cases this is expected, and you'd write\nsomething like following:\n\n```js\nvar gulp = require('gulp');\nvar pomerge = require('gulp-pomerge');\nvar gettext = require('gulp-angular-gettext');\n\ngulp.task('translations', function () {\n    return gulp.src('po/**/*.po')\n        .pipe(gettext.compile({format: 'json'}))\n        .pipe(gulp.dest('dist/translations/'));\n});\n```\n\nBut in many other cases, you want to fillup the translation strings with the\nsame strings as translations:\n\n\n```js\nvar gulp = require('gulp');\nvar pomerge = require('gulp-pomerge');\nvar gettext = require('gulp-angular-gettext');\n\ngulp.task('translations', function () {\n    return gulp.src('po/**/*.po')\n        .pipe(pomerge({\n            items: function(item) {\n                // If msgstr is empty, use identity translation\n                if (!item.msgstr.length) {\n                  item.msgstr = [''];\n                }\n                if (!item.msgstr[0]) {\n                    item.msgstr[0] = item.msgid;\n                }\n                return item;\n            }\n        }))\n        .pipe(gettext.compile({format: 'json'}))\n        .pipe(gulp.dest('dist/translations/'));\n});\n```\n\nThis can be useful when verifying translations in \n[angular-translate][3] \nusing `useMissingTranslationHandler`.\n\nBy the way, due to its async nature it can also be used to auto-fill \ntranslations using online translation APIs.\n\nCheckout my `gulp-pomerge-yandex` plugin for dynamically fetching\ntranslations from [yandex][4] - a free translation service.\n\n\n# End Matter\n\n## Afterword\n\nWell, I created this library as a building block for dynamically \nfetching missing translations from a webservice. However, this library\nis written in a way that it can be used with any other sync / async\noperations for filling up missing translations or even transforming\nexisting translations.\n\n## Author\n\n[Mihir Gokani][0]\n\n## License\n\nLicensed under MIT.\n\n\n[0]: https://github.com/mihirgokani007\n[1]: https://npmjs.org/package/gulp-pomerge\n[2]: https://github.com/rubenv/pofile#the-poitem-class\n[3]: https://angular-translate.github.io\n[4]: https://tech.yandex.com/translate\n\n\n",
+  "readmeFilename": "README.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mihirgokani007/gulp-pomerge.git"
+  },
+  "scripts": {},
+  "version": "1.0.0"
+}
