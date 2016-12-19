@@ -9,12 +9,13 @@ var PoFile = require('pofile');
 
 var gUtil = require('gulp-util');
 
-module.exports = function (outputFile, options) {
-  options = util._merge({conflicts: 'merge'}, options); // conflicts -> skip|replace|merge
-
+module.exports = function (file, options) {
+  options = util._extend({conflicts: 'merge'}, options); // conflicts -> skip|replace|merge
+  
   var merged = {comments: [], headers: [], items: []};
   var index = {comments: {}, headers: {}, items: {}};
   var latestFile;
+  var latestMod;
 
   return through.obj(function (file, enc, cb) {
     var self = this;
@@ -28,9 +29,16 @@ module.exports = function (outputFile, options) {
       self.emit('error', new gUtil.PluginError(pluginName, 'Streaming not supported'));
       return cb();
     }
-
+    
+    // set latest file if not already set,
+    // or if the current file was modified more recently.
+    if (!latestMod || file.stat && file.stat.mtime > latestMod) {
+      latestFile = file;
+      latestMod = file.stat && file.stat.mtime;
+    }
+      
     var pofile = PoFile.parse(file.contents.toString());
-
+    
     // Comments
     pofile.comments.forEach(function(comment) {
       var existing = merged.comments[index.comments[comment]];
@@ -42,7 +50,7 @@ module.exports = function (outputFile, options) {
 
     // Headers
     Object.keys(pofile.headers).forEach(function(key) {
-      var value = pofile.headers[header];
+      var value = pofile.headers[key];
       var header = {key: key, value: value};
       var existing = merged.headers[index.headers[key]];
       var replace;
@@ -51,7 +59,7 @@ module.exports = function (outputFile, options) {
       // header._stats = fs.statSync(file.path);
       if (existing == null) { // current header is new
         merged.headers.push(header);
-        index.headers[header] = merged.headers.length - 1; // the index within merged.headers
+        index.headers[key] = merged.headers.length - 1; // the index within merged.headers
       } else { // current header is a duplicate
         if (existing.value && value) {
           replace = options.conflicts === 'replace' ? true
@@ -65,7 +73,7 @@ module.exports = function (outputFile, options) {
         }
       }
     });
-
+    
     pofile.items.forEach(function(item) {
       var msgid = item.msgid;
       var msgstr = item.msgstr ? item.msgstr.join('') : '';
@@ -74,11 +82,13 @@ module.exports = function (outputFile, options) {
       
       item._stats = file.stat;
       // item._stats = fs.statSync(file.path);
+      
       if (existing == null) { // current item is new
         merged.items.push(item);
-        index.items[item] = merged.items.length - 1; // the index within merged.items
+        index.items[msgid] = merged.items.length - 1; // the index within merged.items
       } else { // current item is a duplicate
         alreadyFilled = existing.msgstr && existing.msgstr.join('');
+        
         if (alreadyFilled && msgstr) {
           replace = options.conflicts === 'replace' ? true
                   : options.conflicts === 'skip' ? false
@@ -90,6 +100,7 @@ module.exports = function (outputFile, options) {
           merged.items[index.items[msgid]] = item;
         }
       }
+      
     });
 
     cb();
@@ -108,14 +119,14 @@ module.exports = function (outputFile, options) {
 
     // if file opt was a file path
     // clone everything from the latest file
-    if (typeof outputFile === 'string') {
+    if (typeof file === 'string') {
       mergedFile = latestFile.clone({contents: false});
-      mergedFile.path = path.join(latestFile.base, outputFile);
+      mergedFile.path = path.join(latestFile.base, file);
     } else {
-      mergedFile = new File(outputFile);
+      mergedFile = new File(file);
     }
     mergedFile.contents = new Buffer(pofile.toString());
-
+    
     this.push(mergedFile);
     cb();
   });
